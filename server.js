@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Vonage } from '@vonage/server-sdk';
-import fs from 'fs';
 
 dotenv.config();
 
@@ -10,13 +9,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Vonage Authentication using Private Key
+// ✅ Read private key from env instead of file
 const vonage = new Vonage({
   applicationId: process.env.APPLICATION_ID,
-  privateKey: fs.readFileSync(process.env.PRIVATE_KEY_PATH)
+  privateKey: process.env.PRIVATE_KEY.replace(/\\n/g, '\n')
 });
 
-// ✅ Generate JWT for Vishwa or Ammu
+// ✅ Generate JWT
 app.get('/auth/:user', (req, res) => {
   const user = req.params.user;
 
@@ -27,23 +26,19 @@ app.get('/auth/:user', (req, res) => {
   try {
     const token = vonage.generateJwt({
       sub: user,
-      exp: Math.floor(Date.now() / 1000) + 7200 // 2 hours
+      exp: Math.floor(Date.now() / 1000) + 7200
     });
     res.json({ token });
   } catch (error) {
-    console.error("JWT generation failed:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// ✅ Basic Test Route
 app.get('/', (req, res) => {
-  res.send("✅ Vishwa-Ammu Backend Running");
+  res.send("✅ Vishwa-Ammu Backend Running Successfully");
 });
 
-// ✅ Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
