@@ -1,7 +1,8 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { Vonage } from '@vonage/server-sdk';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { Auth } from "@vonage/auth";
+import { tokenGenerate } from "@vonage/jwt";
 
 dotenv.config();
 
@@ -9,14 +10,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Read private key from env instead of file
-const vonage = new Vonage({
+// ✅ Authentication using private key from ENV
+const auth = new Auth({
   applicationId: process.env.APPLICATION_ID,
-  privateKey: process.env.PRIVATE_KEY.replace(/\\n/g, '\n')
+  privateKey: process.env.PRIVATE_KEY.replace(/\\n/g, "\n")
 });
 
-// ✅ Generate JWT
-app.get('/auth/:user', (req, res) => {
+// ✅ JWT token endpoint
+app.get("/auth/:user", (req, res) => {
   const user = req.params.user;
 
   if (!["vishwa", "ammu"].includes(user)) {
@@ -24,21 +25,30 @@ app.get('/auth/:user', (req, res) => {
   }
 
   try {
-    const token = vonage.generateJwt({
-      sub: user,
-      exp: Math.floor(Date.now() / 1000) + 7200
-    });
+    const token = tokenGenerate(
+      process.env.APPLICATION_ID,
+      process.env.PRIVATE_KEY.replace(/\\n/g, "\n"),
+      {
+        sub: user,           // ✅ Identify Vishwa or Ammu
+        exp: Math.floor(Date.now() / 1000) + (60 * 60 * 2) // 2 hrs
+      }
+    );
+
     res.json({ token });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error("JWT Error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-app.get('/', (req, res) => {
-  res.send("✅ Vishwa-Ammu Backend Running Successfully");
+// ✅ Test route
+app.get("/", (req, res) => {
+  res.send("✅ Backend Running: JWT Ready for WebRTC Calls");
 });
 
+// ✅ Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
