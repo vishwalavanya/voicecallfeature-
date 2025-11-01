@@ -13,44 +13,38 @@ app.get("/", (req, res) => {
   res.send("✅ Voice Call Backend Running Successfully!");
 });
 
-app.get("/token/:username", async (req, res) => {
+app.get("/token/:username", (req, res) => {
   try {
     const username = req.params.username;
 
-    const privateKey = process.env.PRIVATE_KEY.replace(/\\n/g, "\n");
-
     const token = tokenGenerate(
       process.env.APPLICATION_ID,
-      privateKey,
+      process.env.PRIVATE_KEY.replace(/\\n/g, "\n"),
       {
         sub: username,
-        exp: Math.round(Date.now() / 1000) + 3600, // 1 hour
+        exp: Math.round(Date.now() / 1000) + 3600, // 1 hour expiry
 
-        // ✅ Correct ACL Permissions for Vonage WebRTC Voice Calls
+        // ✅ Correct minimal WebRTC ACL for Vonage Client SDK
         acl: {
           paths: {
             "/v1/users/**": {},
-            "/v1/conversations/**": {},
             "/v1/sessions/**": {},
             "/v1/devices/**": {},
-            "/v1/media/**": {},
-            "/v1/knocking/**": {},
-            "/v1/applications/**": {},
-            "/v1/calls/**": {},
             "/v1/rtc/**": {}
           }
         }
       }
     );
 
-    return res.json({ username, token });
+    res.json({ username, token });
 
   } catch (error) {
     console.error("Token Error:", error);
-    return res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
 app.listen(3000, () =>
-  console.log("✅ Server running on port 3000 — JWT Ready ✅")
+  console.log("✅ WebRTC Token Server running on port 3000 ✅")
 );
+
