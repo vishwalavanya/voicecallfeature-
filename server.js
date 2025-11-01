@@ -1,5 +1,5 @@
 import express from "express";
-import { Vonage } from "@vonage/server-sdk";
+import { tokenGenerate } from "@vonage/jwt";
 import dotenv from "dotenv";
 import cors from "cors";
 
@@ -9,41 +9,36 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const vonage = new Vonage({
-  applicationId: process.env.APPLICATION_ID,
-  privateKey: process.env.PRIVATE_KEY.replace(/\\n/g, "\n"),
-});
-
 app.get("/", (req, res) => {
   res.send("✅ Voice Call Backend Running Successfully!");
 });
 
-// Generate JWT Token for Users
-app.get("/token/:username", async (req, res) => {
+app.get("/token/:username", (req, res) => {
   try {
     const username = req.params.username;
 
-    const token = vonage.jwt.sign({
-      sub: username,
-      acl: {
-        paths: {
-          "/*/users/**": {},
-          "/*/conversations/**": {},
-          "/*/sessions/**": {},
-          "/*/devices/**": {},
-          "/*/image/**": {},
-          "/*/media/**": {},
-          "/*/applications/**": {},
-          "/*/push/**": {},
-          "/*/knocking/**": {}
+    const token = tokenGenerate(
+      process.env.APPLICATION_ID,
+      process.env.PRIVATE_KEY.replace(/\\n/g, "\n"),
+      {
+        sub: username,
+        exp: Math.round(Date.now() / 1000) + 3600, // 1 hour
+        acl: {
+          paths: {
+            "/*/users/**": {},
+            "/*/sessions/**": {},
+            "/*/conversations/**": {},
+            "/*/devices/**": {},
+            "/*/media/**": {},
+            "/*/applications/**": {},
+            "/*/push/**": {},
+            "/*/knocking/**": {}
+          }
         }
       }
-    });
+    );
 
-    res.json({
-      username,
-      token
-    });
+    res.json({ username, token });
   } catch (error) {
     console.error("Token Error:", error);
     res.status(500).json({ error: error.message });
@@ -51,7 +46,3 @@ app.get("/token/:username", async (req, res) => {
 });
 
 app.listen(3000, () => console.log("✅ Server running on port 3000"));
-
-
-
-
